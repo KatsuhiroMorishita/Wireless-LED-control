@@ -8,11 +8,11 @@
 #include <EEPROM.h>
 
 // IO map
-const int red_pin   = 9;
-const int green_pin = 6;
+const int red_pin   = 6;
+const int green_pin = 9;
 const int blue_pin  = 5;
 // header
-const char header = 0x80;
+const char header = 0x7f;
 // address
 const int id_init = -1;
 int my_id = id_init;
@@ -22,6 +22,8 @@ char pwm_green = 0;
 char pwm_blue = 0;
 // com
 Stream *xbee;
+const int xbee_pin = 12;
+SoftwareSerial _xbee_serial(xbee_pin, 11); // 11 pin is no connect!
 /**************************************/
 // timeout check class
 class TimeOut
@@ -59,7 +61,7 @@ int recieve_id(Stream &port)
   int id = id_init;
   Stream *_port = &port;
   
-  long wait_time_ms = 30000l;
+  long wait_time_ms = 5000l;
   _port->print("please input ID. last ");
   _port->print(wait_time_ms);
   _port->println(" ms.");
@@ -88,6 +90,15 @@ int recieve_id(Stream &port)
   return id;
 }
 
+
+// LED control
+void light(int r, int g, int b)
+{
+  analogWrite(red_pin  , r);
+  analogWrite(green_pin, g);
+  analogWrite(blue_pin , b);
+  return;
+}
 
 // recieve light pattern
 // return: char, 1: 再度呼び出しが必要
@@ -136,9 +147,7 @@ char receive_light_pattern(Stream *port)
           int masked_c = (c >> (7 - bit_location)) & 0x01;
           if (masked_c)
           {
-            analogWrite(red_pin  , _pwm_red);
-            analogWrite(green_pin, _pwm_green);
-            analogWrite(blue_pin , _pwm_blue);
+            light(_pwm_red, _pwm_green, _pwm_blue);
             ans = 0;
             break;
           }
@@ -157,12 +166,12 @@ void setup()
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
-  Serial.println("-- start --");
+  delay(1000);
+  Serial.println("-- setup start --");
   
-  //SoftwareSeria ss;
-  //ss.begin(9600);
+  _xbee_serial.begin(9600);
   
-  xbee = &Serial;
+  xbee = &_xbee_serial;// &Serial;
   
   // get ID
   int _id = recieve_id(Serial);
@@ -170,16 +179,22 @@ void setup()
   {
     my_id = _id;
     Serial.println("-- write id to EEPROM --");
-    EEPROM.write(0, my_id);  // msb first ?
+    byte v_h = (byte)((my_id & 0xff00) >> 8);
+    EEPROM.write(0, v_h);
+    Serial.println(v_h);
+    byte v_l = (byte)(my_id & 0x00ff);
+    EEPROM.write(1, v_l);
+    Serial.println(v_l);
     delay(100);
   }
   else
   {
     Serial.println("-- read id from EEPROM --");
-    byte v1 = EEPROM.read(0);
-    byte v2 = EEPROM.read(1);
-    my_id = (int)v1 << 8 + (int)v2; // msb first ?
-    //my_id = (int)v2 << 8 + (int)v1; // lsb first ?
+    byte v_h = EEPROM.read(0);
+    byte v_l = EEPROM.read(1);
+    Serial.println(v_h);
+    Serial.println(v_l);
+    my_id = (int)v_h * 256 + (int)v_l;
   }
   Serial.println("-- my ID --");
   Serial.println(my_id);
@@ -191,6 +206,16 @@ void setup()
     Serial.println("-- program end --");
     for(;;);
   }
+  Serial.println("-- ID check OK --");
+  
+  // light test pattern
+  Serial.println("-- test turn on --");
+  light(100, 100, 100);
+  delay(1000);
+  light(0, 0, 0);
+  
+  Serial.println("-- setup end --");
+  Serial.println("-- stand-by --");
 }
 
 // loop
@@ -199,8 +224,10 @@ void loop()
   if(xbee->available())
   {
     int c = xbee->read();
+    Serial.println(c);
     if((char)c == header)
     {
+      //light(100, 100, 100);
       while(1)
       {
         char ans = receive_light_pattern(xbee);

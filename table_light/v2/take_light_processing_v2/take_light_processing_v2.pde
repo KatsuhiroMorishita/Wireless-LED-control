@@ -41,7 +41,7 @@ void setup()
   // serial port setting
   String[] ports = Serial.list();
   println(ports);
-  myPort = new Serial(this, ports[2], 9600); // can i search available serial port?
+  myPort = new Serial(this, ports[3], 9600); // can i search available serial port?
   
   light(255, 255, 255, 200);
 }
