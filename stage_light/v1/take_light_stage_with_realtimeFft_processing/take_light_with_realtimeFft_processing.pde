@@ -165,7 +165,15 @@ int calc_green(FFT _fft)
 
 void draw()
 {
-  background(0);
+  // draw LED light order
+  int r = calc_red(fft);
+  int g = calc_green(fft);
+  int b = calc_blue(fft);
+  int[] test = {0, 1, 0, 1};
+  light(r, g, b, test);
+  background(r, g, b);
+  
+  // draw FFT result
   stroke(255);
   fft.forward(in.mix);
   int specSize = fft.specSize();
@@ -174,13 +182,6 @@ void draw()
     float x = map(i, 0, specSize, 0, width);
     line(x, height, x, height - fft.getBand(i) * 8);
   }
-  
-  int r = calc_red(fft);
-  int g = calc_green(fft);
-  int b = calc_blue(fft);
-  int[] test = {0, 1, 0, 1};
-  light(r, g, b, test);
-  background(r, g, b);
 }
 
 
