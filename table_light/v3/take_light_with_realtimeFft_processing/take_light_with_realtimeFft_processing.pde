@@ -15,14 +15,16 @@ AudioInput in;
 FFT fft;
 float amp_global = 0.005;
 float[] amplitude = {amp_global*100, amp_global*100, amp_global*100};
-//int divide_coe = 10; // general music
-//int divide_coe = 4;  // anime music
-//int divide_coe = 6;  // piano, sacred song
-int divide_coe = 2;  // bocaroid
-//int divide_coe = 8;  // whistle
 //int divide_coe = 20; // low man voice
+//int divide_coe = 10; // general music
+//int divide_coe = 8;  // whistle
+//int divide_coe = 6;  // piano, sacred song
 //int divide_coe = 5;  // violin
+//int divide_coe = 4;  // anime music
+//int divide_coe = 3; // hoge
+int divide_coe = 2;  // bocaroid
 //int divide_coe = 1;
+
 
 //-------------------------------
 
@@ -154,7 +156,7 @@ int calc_green(FFT _fft)
     float theta = x * 2.0 * 3.14;
     float v = -cos(theta) + 1.0;
     v *= log(abs(fft.getBand(i)) + 1);
-    g += v;
+    g += v / 2.0;
   }
   g *= amplitude[1] * divide_coe;
   print("green: ");
