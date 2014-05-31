@@ -175,7 +175,7 @@ void setup()
   
   // get ID
   int _id = recieve_id(Serial);
-  if(_id >= 0)
+  if(_id >= 0 && _id != id_init)
   {
     my_id = _id;
     Serial.println("-- write id to EEPROM --");
@@ -185,6 +185,9 @@ void setup()
     byte v_l = (byte)(my_id & 0x00ff);
     EEPROM.write(1, v_l);
     Serial.println(v_l);
+    int parity = (int)v_h ^ (int)v_l;
+    EEPROM.write(2, (byte)parity);
+    Serial.println(parity);
     delay(100);
   }
   else
@@ -192,9 +195,15 @@ void setup()
     Serial.println("-- read id from EEPROM --");
     byte v_h = EEPROM.read(0);
     byte v_l = EEPROM.read(1);
+    byte v_p = EEPROM.read(2);
     Serial.println(v_h);
     Serial.println(v_l);
-    my_id = (int)v_h * 256 + (int)v_l;
+    Serial.println(v_p);
+    int parity = (int)v_h ^ (int)v_l;
+    if(parity == v_p)
+      my_id = (int)v_h * 256 + (int)v_l;
+    else
+      Serial.println("-- parity is not match --");
   }
   Serial.println("-- my ID --");
   Serial.println(my_id);
