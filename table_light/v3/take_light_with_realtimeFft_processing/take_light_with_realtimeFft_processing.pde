@@ -156,7 +156,7 @@ int calc_green(FFT _fft)
     float theta = x * 2.0 * 3.14;
     float v = -cos(theta) + 1.0;
     v *= log(abs(fft.getBand(i)) + 1);
-    g += v / 2.0;
+    g += v / 2.0;  // to be same scale with red and blue, divided by 2
   }
   g *= amplitude[1] * divide_coe;
   print("green: ");
