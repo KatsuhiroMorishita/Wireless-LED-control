@@ -124,11 +124,12 @@ char receive_light_pattern(Stream *port)
         ans = 1;
         break;                    // 再帰は避けたい
       }
-      if((c & 0x80) > 0)          // プロトコルの仕様上、ありえないコードを受信
+      if((c & 0x80) == 0)         // プロトコルの仕様上、ありえないコードを受信
       {
         ans = 2;
         break;                    // エラーを通知して、関数を抜ける
       }
+      c = c & 0x7f;               // 最上位ビットにマスク
       to.set_timeout(20);
       if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
         c *= 2;
