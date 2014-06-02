@@ -62,7 +62,7 @@ int recieve_id(Stream &port)
   Stream *_port = &port;
   
   long wait_time_ms = 5000l;
-  _port->print("please input ID. last ");
+  _port->print("please input ID. within ");
   _port->print(wait_time_ms);
   _port->println(" ms.");
   
@@ -127,7 +127,7 @@ char receive_light_pattern(Stream *port)
       if((c & 0x80) > 0)          // プロトコルの仕様上、ありえないコードを受信
       {
         ans = 2;
-        break;                    // 再帰は避けたい
+        break;                    // エラーを通知して、関数を抜ける
       }
       to.set_timeout(20);
       if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
