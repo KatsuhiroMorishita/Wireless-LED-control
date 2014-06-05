@@ -1,4 +1,4 @@
-/* program name: take_light_arduino_v3                  */
+/* program name: take_light_arduino_v4                  */
 /* author:  Katsuhiro MORISHITA                         */
 /* :                                                    */
 /* create:  2014-05-25                                  */
