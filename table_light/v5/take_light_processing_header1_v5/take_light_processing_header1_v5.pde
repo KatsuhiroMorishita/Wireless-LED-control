@@ -1,4 +1,4 @@
-/* program name: take_light_processing_v5               */
+/* program name: take_light_processing_header1_v5               */
 /* author:  Katsuhiro Morishita                         */
 /* :                                                    */
 /* create:  2014-06-06                                  */
