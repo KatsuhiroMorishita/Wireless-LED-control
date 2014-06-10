@@ -63,7 +63,14 @@ void setup()
   // serial port setting
   String[] ports = Serial.list();
   println(ports);
-  myPort = new Serial(this, ports[4], baudrate);
+  String port = "";      // only available that usbserial is just one.
+  for (int i = 0 ; i < ports.length; i++)
+  {
+    port = ports[i];
+    if(match(port, ".*usbserial.*") != null)
+      break;
+  }
+  myPort = new Serial(this, port, baudrate);
   
   // test light pattern
   light(255, 255, 255, unit_id);
