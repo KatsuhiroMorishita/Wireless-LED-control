@@ -19,9 +19,9 @@ const long baud_stage = 115200l;
 AltSoftSerial serial_stage;
 
 const int group1 = 0;
-const int group2 = 12; // 19200 bpsだと1チャンネル当たり、12ユニット以下でないと、30 fpsは出ない
-const int group3 = 24;
-const int group4 = 36;
+const int group2 = 14; // 19200 bpsだと1チャンネル当たり、12ユニット以下でないと、30 fpsは出ない
+const int group3 = 28; // 未使用IDがあることを前提に、ここでは割り振っている。
+const int group4 = 42;
 
 //--------------------------------------
 
