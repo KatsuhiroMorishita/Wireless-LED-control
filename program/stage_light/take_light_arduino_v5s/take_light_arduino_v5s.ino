@@ -1,10 +1,12 @@
-/* program name: take_light_arduino_v5s                 */
-/* author:  Katsuhiro MORISHITA                         */
-/* purpose: ステージに並べられたテープLEDを制御するためのコード */
-/* memo:    take_light_arduino_v5を流用した。             */
-/* create:  2014-06-22                                  */
-/* license:  MIT                                        */
-/* format: header, R, G, B, lisht bit field             */
+/* program name: take_light_arduino_v5s                  */
+/* author:  Katsuhiro MORISHITA                          */
+/* purpose: ステージに並べられたテープLEDを制御するためのコード  */
+/* memo:    take_light_arduino_v5を流用した。              */
+ /* create:  2014-06-22                                  */
+/* license:  MIT                                         */
+/* format: header, R, G, B, lisht bit field              */
+/* memo: 1) 本プログラム内のLEDの色指定は間違っています。        */
+/*       2) ATemega328P 内蔵8MHzで動作することを前提にしています*/
 #include <AltSoftSerial.h>
 #include <EEPROM.h>
 
