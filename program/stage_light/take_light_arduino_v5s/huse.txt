@@ -1,0 +1,15 @@
+BODLEVEL = DISABLED
+RSTDISBL = [ ]
+DWEN = [ ]
+SPIEN = [X]
+WDTON = [ ]
+EESAVE = [ ]
+BOOTSZ = 2048W_3800
+BOOTRST = [ ]
+CKDIV8 = [ ]
+CKOUT = [ ]
+SUT_CKSEL = INTRCOSC_8MHZ_6CK_14CK_65MS
+
+EXTENDED = 0xFF (valid)
+HIGH = 0xD9 (valid)
+LOW = 0xE2 (valid)

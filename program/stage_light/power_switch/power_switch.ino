@@ -7,7 +7,7 @@
 /*         D2, D3, D4ポートはLEDの電源を制御するFETに接続されている。                   */
 /* Created: 2014-06-21                                                           */
 
-const long baud = 38400l;
+const long baud = 9600l;
 
 void setup()
 {
