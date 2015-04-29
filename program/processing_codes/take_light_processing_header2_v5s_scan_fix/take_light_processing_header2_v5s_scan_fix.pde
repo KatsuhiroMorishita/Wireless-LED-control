@@ -1,5 +1,6 @@
 /* program name: take_light_processing_header2_v5       */
 /* author:  Katsuhiro Morishita                         */
+/* memo: */
 /* plat form: Processing 2.2.1                          */
 /* create:  2014-06-06                                  */
 /* license:  MIT                                        */
@@ -7,14 +8,15 @@
 import processing.serial.*;
 
 // target
-final int module_id_start = 42;
-final int module_id_end = 57;
+final int module_id_start = 25;
+final int module_id_end = 31;
 
 // com
 Serial myPort;
-final int baudrate = 38400;
+final int baudrate = 19200;
 final byte pattern_code_header = 0x3f;
-float[] coefficient = {0.8, 1.0, 0.3};
+float[] coefficient = {0.8, 1.0, 0.8};
+float power = 0.1;
 //-------------------------------
 
 // send light pattern
@@ -25,9 +27,9 @@ void light(int r, int g, int b, int unit_id)
   delay(5);
   
   // tuning
-  r = (int)((float)r * coefficient[0]);
-  g = (int)((float)g * coefficient[1]);
-  b = (int)((float)b * coefficient[2]);
+  r = (int)((float)r * coefficient[0] * power);
+  g = (int)((float)g * coefficient[1] * power);
+  b = (int)((float)b * coefficient[2] * power);
   
   // send RGB pattern
   int limit = 127;
@@ -50,9 +52,50 @@ void light(int r, int g, int b, int unit_id)
   // send id
   myPort.write(unit_id | 0x80);
   print("ID: ");
-  println(unit_id);
+  println(str(unit_id));
+  
+  // show ID for Front
+  text("hoge", 0, 0, 300, 300);
 
   return;
+}
+
+
+void pattern01()
+{
+  float omega = 0.05;
+  float pi = 3.141592;
+  float t = (float)millis() / 1000.0;
+  float theta = 2.0 * pi * omega * t;
+  int range = 100 / 2;
+  float offset = 120.0 / 180.0 * pi;
+  int r = (int)(sin(theta + offset * 0) * range + range);
+  int g = (int)(sin(theta + offset * 1) * range + range);
+  int b = (int)(sin(theta + offset * 2) * range + range);
+  background(r, g, b);
+  for(int _id = module_id_start; _id <= module_id_end; _id++)
+  {
+    light(r, g, b, _id);
+  }
+}
+
+void pattern02()
+{
+  float omega = 0.05;
+  float pi = 3.141592;
+  float t = (float)millis() / 1000.0;
+  float theta = 2.0 * pi * omega * t;
+  int range = 100 / 2;
+  float offset = 120.0 / 180.0 * pi;
+  int r = (int)(sin(theta + offset * 0) * range + range);
+  int g = (int)(sin(theta + offset * 1) * range + range);
+  int b = (int)(sin(theta + offset * 2) * range + range);
+  background(r, g, b);
+  for(int _id = module_id_start; _id <= module_id_end; _id++){
+    light(r, g, b, _id);
+    delay(100);
+    light(0, 0, 0, _id);
+  }
 }
 
 
@@ -61,19 +104,21 @@ void setup()
   // window size
   size(400, 400);
   frameRate(30);
+  textSize(40);
+  fill(0);
   
   // serial port setting
   String[] ports = Serial.list();
   println(ports);
   String port = "COM18";      // for Windows
-  /*
+  /**/
   for (int i = 0 ; i < ports.length; i++)
   {
     port = ports[i];
     if(match(port, ".*usbserial.*") != null)
       break;
   }
-  */
+  /**/
   myPort = new Serial(this, port, baudrate);
   
   // test light pattern
@@ -86,19 +131,7 @@ void setup()
 
 void draw()
 {
-  float omega = 0.05;
-  float pi = 3.141592;
-  float t = (float)millis() / 1000.0;
-  float theta = 2.0 * pi * omega * t;
-  int range = 127 / 2;
-  float offset = 120.0 / 180.0 * pi;
-  int r = (int)(sin(theta + offset * 0) * range + range);
-  int g = (int)(sin(theta + offset * 1) * range + range);
-  int b = (int)(sin(theta + offset * 2) * range + range);
-  for(int _id = module_id_start; _id <= module_id_end; _id++)
-    light(r, g, b, _id);
-    
-  background(r, g, b);
+  pattern02();
 }
 
 void serialEvent(Serial myPort) 

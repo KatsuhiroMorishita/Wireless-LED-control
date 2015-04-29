@@ -9,8 +9,8 @@
 
 // IO map
 const int red_pin   = 6;
-const int green_pin = 3;
-const int blue_pin  = 5;
+const int green_pin = 5;
+const int blue_pin  = 3;
 // header
 const char header = 0x7f;
 const char header_v2 = 0x3f;
