@@ -8,8 +8,8 @@
 import processing.serial.*;
 
 // target
-final int module_id_start = 25;
-final int module_id_end = 31;
+final int module_id_start = 100;
+final int module_id_end = 130;
 
 // com
 Serial myPort;
@@ -75,7 +75,16 @@ void pattern01()
   background(r, g, b);
   for(int _id = module_id_start; _id <= module_id_end; _id++)
   {
-    light(r, g, b, _id);
+    //light(r, g, b, _id);
+    /**/
+    for(int i = 0; i <= 1; i++)
+    {
+      int k = _id + i * 5;
+      if(k > module_id_end) k = module_id_start + k - module_id_end;
+      if(k < module_id_start) k = module_id_end + k - module_id_start;
+      light(r, g, b, k);
+    }
+    /**/
   }
 }
 
@@ -131,7 +140,7 @@ void setup()
 
 void draw()
 {
-  pattern02();
+  pattern01();
 }
 
 void serialEvent(Serial myPort) 
