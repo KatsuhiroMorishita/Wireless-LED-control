@@ -19,7 +19,7 @@ const char header_v2 = 0x3f;
 const int NUMPIXELS = 16 * 3 + 12;
 const int IO_PIN = 6;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, IO_PIN, NEO_GRB + NEO_KHZ800);
-const float briteness_max_for_all_on = 0.7f;
+const float briteness_max_for_all_on = 1.0f;
 
 // own address
 const int id_init = -1;
@@ -37,11 +37,6 @@ boolean mode_auto = true;
 AltSoftSerial _xbee_serial(8,9); // port is fixed on 8 & 9 at UNO.
 #endif
 
-#ifdef PLATFORM_IS_UNO
-float power_scale = 0.3;
-#elif
-float power_scale = 1.0;
-#endif
 
 /** class *************************************/
 // timeout check class
@@ -269,6 +264,9 @@ int recieve_id(Stream &port)
 // 全てのLEDを単色に光らせる
 void light(int r, int g, int b)
 {
+  if(r < 127) r = r << 1; // スケール調整
+  if(g < 127) g = g << 1;
+  if(b < 127) b = b << 1;
   r = (int)(briteness_max_for_all_on * (float)r);
   g = (int)(briteness_max_for_all_on * (float)g);
   b = (int)(briteness_max_for_all_on * (float)b);
@@ -453,6 +451,7 @@ void loop()
           break;
       }
     }
+    Serial.flush();
   }
 }
 
