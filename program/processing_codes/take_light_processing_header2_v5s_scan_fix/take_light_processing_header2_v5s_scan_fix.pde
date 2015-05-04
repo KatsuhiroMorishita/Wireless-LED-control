@@ -8,15 +8,15 @@
 import processing.serial.*;
 
 // target
-final int module_id_start = 100;
-final int module_id_end = 130;
+final int module_id_start = 101;
+final int module_id_end = 121;
 
 // com
 Serial myPort;
 final int baudrate = 19200;
 final byte pattern_code_header = 0x3f;
 float[] coefficient = {0.8, 1.0, 0.8};
-float power = 0.1;
+float power = 1.0;
 //-------------------------------
 
 // send light pattern
@@ -75,8 +75,8 @@ void pattern01()
   background(r, g, b);
   for(int _id = module_id_start; _id <= module_id_end; _id++)
   {
-    //light(r, g, b, _id);
-    /**/
+    light(r, g, b, _id);
+    /*
     for(int i = 0; i <= 1; i++)
     {
       int k = _id + i * 5;
@@ -84,7 +84,7 @@ void pattern01()
       if(k < module_id_start) k = module_id_end + k - module_id_start;
       light(r, g, b, k);
     }
-    /**/
+    */
   }
 }
 
@@ -112,7 +112,7 @@ void setup()
 {
   // window size
   size(400, 400);
-  frameRate(30);
+  frameRate(20);
   textSize(40);
   fill(0);
   
