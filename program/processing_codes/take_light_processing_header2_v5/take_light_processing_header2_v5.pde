@@ -7,7 +7,7 @@
 import processing.serial.*;
 
 // target
-final int unit_id = 1;
+final int unit_id = 99;
 
 // com
 Serial myPort;
@@ -76,6 +76,7 @@ void setup()
   light(255, 255, 255, unit_id);
   delay(2000);
   light(0, 0, 0, unit_id);
+  
 }
 
 void draw()
@@ -125,4 +126,17 @@ void keyPressed()
   // for check
   background(r, g, b);
   
+ // change to control
+ if(key == 'a'){
+   println("pressed key: a");
+   for(int k = 0; k < 200; k++)
+     myPort.write(0x5f);
+ }
+ 
+ // change to auto
+ if(key == 'b'){
+   println("pressed key: b");
+   for(int k = 0; k < 200; k++)
+     myPort.write(0x6f);
+ }
 }

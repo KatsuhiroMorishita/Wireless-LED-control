@@ -17,6 +17,7 @@ const char header = 0x7f;
 const char header_v2 = 0x3f;
 const char header_v3 = 0x4f; // 内部時計のリセット（同期用）
 const char header_v4 = 0x5f; // オートモードへ切り替え
+const char header_v5 = 0x6f; // 遠隔操作モードへ切り替え
 
 // serial LED setup
 const int NUMPIXELS = 16 * 3 + 12;
@@ -29,22 +30,23 @@ const int id_init = -1;
 int my_id = id_init;
 
 // com
+#ifdef PLATFORM_IS_UNO
+AltSoftSerial _xbee_serial(8,9); // port is fixed on 8 & 9 at UNO.
+#endif
 long usbserial_baudrate = 57600;
 long xbee_baudrate = 38400;
 Stream *xbee;
 
 // other
-boolean mode_auto = true;
+boolean mode_auto = true;        // auto: 自律制御
+const float power_scale_for_all = 0.3; // 全点灯時の輝度強度
 
-#ifdef PLATFORM_IS_UNO
-AltSoftSerial _xbee_serial(8,9); // port is fixed on 8 & 9 at UNO.
-#endif
+// モード切り替え関係
+const int buff_size = 10;
+char buff[buff_size];
+const int sin_size = 41;
+float anplitude_sin[sin_size];
 
-#ifdef PLATFORM_IS_UNO
-float power_scale = 0.3;
-#elif
-float power_scale = 1.0;
-#endif
 
 /** class *************************************/
 // timeout check class
@@ -297,6 +299,10 @@ int recieve_id(Stream &port)
 // 全てのLEDを単色に光らせる
 void light(int r, int g, int b)
 {
+  if(r < 127) r = r << 1;
+  if(g < 127) g = g << 1;
+  if(b < 127) b = b << 1;
+  
   r = (int)(briteness_max_for_all_on * (float)r);
   g = (int)(briteness_max_for_all_on * (float)g);
   b = (int)(briteness_max_for_all_on * (float)b);
@@ -451,11 +457,10 @@ void light_pattern5()
   const int _max = 255;
   static int r, g, b;
   static long t;
-  static long term = 4000l; // 1回の点灯時間
+  static long term = 8000l;        // 1回の点灯時間
   static long tw = 0l;
-  static int width = 5;     // 奇数のこと
-  static float anplitude[] = {
-    0.1, 0.7, 1.0, 0.7, 0.1  }; // len == width, sin()で良いなら、初期化は以下の中に埋め込む
+  static int width = sin_size;     // 点灯するLEDの個数. 奇数のこと
+  static float *anplitude = anplitude_sin; // 輝度の入った配列
   static int index;
   static TimeOut to;
   static boolean mode_turn_on = true;
@@ -467,7 +472,7 @@ void light_pattern5()
       r = random(0, _max); // 色相はここで決まる
       g = random(0, _max);
       b = random(0, _max);
-      index = random(width - 1, NUMPIXELS - (int)(width / 2));
+      index = random(0, NUMPIXELS);
       mode_turn_on_backup = mode_turn_on;
       t = millis();
       to.set_timeout(term);
@@ -488,6 +493,8 @@ void light_pattern5()
       mode_turn_on = false;
   }
   else{
+    // 消灯時間が0になるようにコメントアウト
+    /*
     if(mode_turn_on_backup == true){ // renew to obj
       int _delay = 1000;
       to.set_timeout(random(_delay, _delay * 2));
@@ -497,12 +504,23 @@ void light_pattern5()
     // check time-out
     if(to.is_timeout() == true)
       mode_turn_on = true;
+    */
+    
+    if(mode_turn_on_backup == true){ // renew to obj
+      //int _delay = 1000;
+      //to.set_timeout(random(_delay, _delay * 2));
+      mode_turn_on_backup = mode_turn_on;
+      light(0, 0, 0);                // たまに通信が上手く行かなくて光り続けるLEDがあるやつの対策。
+    }
+    // check time-out
+    //if(to.is_timeout() == true)
+      mode_turn_on = true;
   }
   return;
 }
 
 
-
+// 全部同じ色に光る
 void light_pattern6()
 {
   int r, g, b;
@@ -510,9 +528,9 @@ void light_pattern6()
   for(int k = 0; k < 100; k++)
   {
     colmap.GetColor((double)k / 100, &r, &g, &b);
-    r = (int)((float)r * power_scale);
-    g = (int)((float)g * power_scale);
-    b = (int)((float)b * power_scale);
+    r = (int)((float)r * power_scale_for_all);
+    g = (int)((float)g * power_scale_for_all);
+    b = (int)((float)b * power_scale_for_all);
     Serial.print(r);
     Serial.print(",");
     Serial.print(g);
@@ -532,9 +550,9 @@ void light_pattern6()
   for(int k = 100; k > 0; k--)
   {
     colmap.GetColor((double)k / 100, &r, &g, &b);
-    r = (int)((float)r * power_scale);
-    g = (int)((float)g * power_scale);
-    b = (int)((float)b * power_scale);
+    r = (int)((float)r * power_scale_for_all);
+    g = (int)((float)g * power_scale_for_all);
+    b = (int)((float)b * power_scale_for_all);
     Serial.print(r);
     Serial.print(",");
     Serial.print(g);
@@ -555,76 +573,6 @@ void light_pattern6()
 }
 
 
-
-// recieve light pattern
-// return: char, 1: 再度呼び出しが必要
-char receive_light_pattern(Stream *port)
-{
-  char ans = 2;
-  int my_index = my_id / 8;
-  TimeOut to;
-  int index = 0;
-  int _pwm_red = 0;
-  int _pwm_green = 0;
-  int _pwm_blue = 0;
-
-  Serial.println("-- p1 --");
-  to.set_timeout(20);
-  while(to.is_timeout() == false)
-  {
-    if(port->available())
-    {
-      int c = port->read();
-      //Serial.print("-- c --: ");
-      //Serial.print(c);
-      //Serial.println("");
-      index += 1;
-      if(c == header || c == header_v2)
-      {
-        //Serial.println("-- d --");
-        ans = 1;
-        break;                    // 再帰は避けたい
-      }
-      if((c & 0x80) == 0)         // プロトコルの仕様上、ありえないコードを受信
-      {
-        //Serial.println("-- e --");
-        ans = 2;
-        break;                    // エラーを通知して、関数を抜ける
-      }
-      c = c & 0x7f;               // 最上位ビットにマスク
-      to.set_timeout(20);
-      if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
-        c *= 2;
-      if(index == 1)
-      {
-        _pwm_red = c;
-      }
-      else if(index == 2)
-      {
-        _pwm_green = c;
-      }
-      else if(index == 3)
-      {
-        _pwm_blue = c;
-      }
-      else // 点灯するかどうかの判断
-      {
-        if ((index - 4) == my_index)
-        {
-          int bit_location = my_id % 8;
-          int masked_c = (c >> (7 - bit_location)) & 0x01;
-          if (masked_c)
-          {
-            light(_pwm_red, _pwm_green, _pwm_blue);
-            ans = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-  return ans;
-}
 
 // recieve light pattern v2
 // return: char, 1: 再度呼び出しが必要
@@ -661,8 +609,6 @@ char receive_light_pattern_v2(Stream *port)
       }
       c = c & 0x7f;               // 最上位ビットにマスク
       to.set_timeout(20);
-      if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
-        c *= 2;
       if(index == 1)
       {
         _pwm_red = c;
@@ -701,6 +647,17 @@ char receive_light_pattern_v2(Stream *port)
 // setup
 void setup()
 { 
+  // init variable
+  // モード切り替え用の変数
+  for(int i = 0; i < buff_size; i++)
+    buff[i] = 0x00;
+  // 発光強度
+  for(int i = 0; i < sin_size; i++)
+    anplitude_sin[i] = sin(3.14 * (float)i / (float)sin_size);
+  
+  // init rand
+  randomSeed(analogRead(A0));
+      
   // serial LED setup
   pixels.begin(); // This initializes the NeoPixel library.
 
@@ -768,7 +725,7 @@ void setup()
   delay(1000);
   //while(1);
   light(0, 0, 0);
-
+  
   Serial.println("-- setup end --");
   Serial.println("-- stand-by --");
 }
@@ -780,34 +737,26 @@ void loop()
 {
   static TimeOut to;
   boolean data_receive = false;
+  //static char buff[5];
+  static int wp = 0;
 
-  if(to.is_timeout() == true)  // もし制御信号が検出されないことが続いたらオートに戻すための仕掛け
-    mode_auto = true;
+  //if(to.is_timeout() == true)  // もし制御信号が検出されないことが続いたらオートに戻すための仕掛け
+  //  mode_auto = true;
 
   // LED制御
   if(mode_auto == true) // 本当はクラス化した方がいいなぁ。
-    light_pattern6();
+    light_pattern5();
 
   // 受信データ処理
   if(xbee->available())
   {
     int c = xbee->read();
+    buff[wp] = (char)c;
+    wp = (wp + 1) % 5;
     Serial.println(c);
-    // 制御パターン1
-    if((char)c == header)
-    {
-      //light(100, 100, 100);
-      while(1)
-      {
-        char ans = receive_light_pattern(xbee);
-        if(ans == 0)
-          data_receive = true;
-        if(ans != 1)
-          break;
-      }
-    }
+
     // 制御パターン2
-    if((char)c == header_v2)
+    if((char)c == header_v2 && mode_auto == false)
     {
       //light(100, 100, 100);
       while(1)
@@ -820,18 +769,38 @@ void loop()
       }
     }
     // しばらく、制御内容を保持する
-    if(data_receive == true){
-      mode_auto = false;
-      to.set_timeout(30000l);  // もし制御信号が検出されないことが続いたらオートに戻すための仕掛け
-    }
-    // 時刻同期のし掛け
-    if((char)c == header_v3){
+//    if(data_receive == true){
+//      mode_auto = false;
+//      to.set_timeout(30000l);  // もし制御信号が検出されないことが続いたらオートに戻すための仕掛け
+//    }
+    
+    
+    // モード切り替え処理
+    boolean header_compleat;
+    
+    // 時刻同期
+    header_compleat = true;
+    for(int i = 0; i < buff_size; i++)
+      if(buff[i] != header_v3)
+        header_compleat = false;
+    if(header_compleat == true)
       kmtimer.reset();
-    }
+    
     // 強制でオートモードに切り替えるコードを受信した場合
-    if((char)c == header_v4){
-      mode_auto == true;
-    }
+    header_compleat = true;
+    for(int i = 0; i < buff_size; i++)
+      if(buff[i] != header_v4)
+        header_compleat = false;
+    if(header_compleat == true)
+      mode_auto = true;
+    
+    // 強制で遠隔操作モードに切り替えるコードを受信した場合
+    header_compleat = true;
+    for(int i = 0; i < buff_size; i++)
+      if(buff[i] != header_v5)
+        header_compleat = false;
+    if(header_compleat == true)
+      mode_auto = false;
   }
 }
 

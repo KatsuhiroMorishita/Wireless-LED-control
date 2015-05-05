@@ -1,222 +1,59 @@
-/* program name: type3_test                             */
+/* program name: take_light_arduino_v5                  */
 /* author:  Katsuhiro MORISHITA                         */
 /* :                                                    */
-/* create:  2015-01-03                                  */
+/* create:  2014-06-06                                  */
 /* license:  MIT                                        */
-/* format 1: header_v2, R, G, B, lisht bit field        */
+/* format: header, R, G, B, lisht bit field             */
 #include <AltSoftSerial.h>
-#include <Adafruit_NeoPixel.h>
 #include <EEPROM.h>
 
-#define PLATFORM_IS_UNO
-//#define PLATFORM_IS_MEGA
-
-/** global variabls　part1 **********************/
+// IO map
+const int red_pin   = 6;
+const int green_pin = 5;
+const int blue_pin  = 3;
 // header
+const char header = 0x7f;
 const char header_v2 = 0x3f;
-
-// serial LED setup
-const int NUMPIXELS = 16 * 3 + 12;
-const int IO_PIN = 6;
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, IO_PIN, NEO_GRB + NEO_KHZ800);
-const float briteness_max_for_all_on = 1.0f;
-
-// own address
+// address
 const int id_init = -1;
 int my_id = id_init;
-
+// pwm
+char pwm_red = 0;
+char pwm_green = 0;
+char pwm_blue = 0;
 // com
 long usbserial_baudrate = 57600;
-long xbee_baudrate = 38400;
+long xbee_baudrate = 19200;
 Stream *xbee;
-
-// other
-boolean mode_auto = true;
-
-#ifdef PLATFORM_IS_UNO
-AltSoftSerial _xbee_serial(8,9); // port is fixed on 8 & 9 at UNO.
-#endif
-
-
-/** class *************************************/
+const int xbee_pin = 8;
+AltSoftSerial _xbee_serial(xbee_pin, 11); // 11 pin is no connect!
+/**************************************/
 // timeout check class
 class TimeOut
 {
-private:
-  long timeout_time;
-
-public:
-  // set timeout time width
-  void set_timeout(long timeout)
-  {
-    this->timeout_time = millis() + timeout;
-  }
-  // timeout check, true: timeout
-  boolean is_timeout()
-  {
-    if(millis() > this->timeout_time)
-      return true;
-    else
-      return false;
-  }
-  // constructer
-  TimeOut()
-  {
-    this->timeout_time = 0l;
-  }
+  private:
+    long timeout_time;
+  
+  public:
+    // set timeout time width
+    void set_timeout(long timeout)
+    {
+      this->timeout_time = millis() + timeout;
+    }
+    // timeout check, true: timeout
+    boolean is_timeout()
+    {
+      if(millis() > this->timeout_time)
+        return true;
+      else
+        return false;
+    }
+    // constructer
+    TimeOut()
+    {
+      this->timeout_time = 0l;
+    }
 };
-
-
-
-class Colormap
-{
-private:
-  double StartH;
-  double EndH;
-  double S;
-  double V;
-  boolean Reverse;
-  void GenerateColorMap(int start, int end, double saturation, double brightness)
-  {
-    if (start > end)
-    {    
-      this->Reverse = true;
-      this->StartH = end % 360;
-      this->EndH = start % 360;
-    }
-    else
-    {
-      this->Reverse = false;
-      this->StartH = start % 360;
-      this->EndH = end % 360;
-    }
-
-    if (saturation > 100) { 
-      this->S = 100; 
-    }
-    else if (saturation < 0) { 
-      this->S = 0; 
-    }
-    else { 
-      this->S = saturation; 
-    }
-
-    if (brightness > 100) { 
-      this->V = 100; 
-    }
-    else if (brightness < 0) { 
-      this->V = 0; 
-    }
-    else { 
-      this->V = brightness; 
-    }
-  }
-  void ConvertHSVtoRGB(double _h, double _s, double _v, int* _r, int* _g, int* _b)
-  {
-    _s = _s / 100;
-    _v = _v / 100;
-    _h = (int)_h % 360;
-
-    if (_s == 0.0)      //Gray
-    {
-      int rgb = (int)((double)(_v * 255));
-
-      *_r = (int)(rgb);
-      *_g = (int)(rgb);
-      *_b = (int)(rgb);
-    }
-    else
-    {
-      int Hi = (int)((int)(_h / 60.0) % 6);
-      double f = (_h / 60.0) - Hi;
-
-      double p = _v * ( 1 - _s);
-      double q = _v * (1 - f * _s);
-      double t = _v * (1 - (1 - f) * _s);
-
-      double r = 0.0;
-      double g = 0.0;
-      double b = 0.0;
-
-      switch (Hi)
-      {
-      case 0:
-        r = _v;
-        g = t;
-        b = p;
-        break;
-
-      case 1:
-        r = q;
-        g = _v;
-        b = p;
-        break;
-
-      case 2:
-        r = p;
-        g = _v;
-        b = t;
-        break;
-
-      case 3:
-        r = p;
-        g = q;
-        b = _v;
-        break;
-
-      case 4:
-        r = t;
-        g = p;
-        b = _v;
-        break;
-
-      case 5:
-        r = _v;
-        g = p;
-        b = q;
-        break;
-
-      default:
-        r = 0;
-        g = 0;
-        b = 0;
-        break;
-      }
-
-      *_r = (int)(r * 255);
-      *_g = (int)(g * 255);
-      *_b = (int)(b * 255);
-    }
-    return;
-  }
-public:
-  Colormap()
-  {
-    this->GenerateColorMap(240.0, 0, 100.0, 100.0);
-  }
-  void GetColor(double value, int* r, int* g, int* b)
-  {
-    if(value > 1.0) value = 1.0;
-    if(value < 0.0) value = 0.0;
-    if (this->Reverse == true)
-    {
-      value = 1.0 - value;
-    }
-    return this->ConvertHSVtoRGB(((this->EndH - this->StartH) * value) + this->StartH, this->S, this->V, r, g, b);
-  }
-};
-
-
-
-
-
-/** global variabls part 2 **********************/
-Colormap colmap;
-
-
-
-
-/** general functions ***************************/
 
 // IDを受信する
 // IDは文字列で受信する。
@@ -226,12 +63,12 @@ int recieve_id(Stream &port)
   TimeOut to;
   int id = id_init;
   Stream *_port = &port;
-
+  
   long wait_time_ms = 5000l;
   _port->print("please input ID. within ");
   _port->print(wait_time_ms);
   _port->println(" ms.");
-
+  
   to.set_timeout(wait_time_ms);
   while(to.is_timeout() == false)
   {
@@ -257,29 +94,92 @@ int recieve_id(Stream &port)
 }
 
 
-
-
-
 // LED control
-// 全てのLEDを単色に光らせる
 void light(int r, int g, int b)
 {
-  if(r < 127) r = r << 1; // スケール調整
+  if(r < 127) r = r << 1;
   if(g < 127) g = g << 1;
   if(b < 127) b = b << 1;
-  r = (int)(briteness_max_for_all_on * (float)r);
-  g = (int)(briteness_max_for_all_on * (float)g);
-  b = (int)(briteness_max_for_all_on * (float)b);
-  for(int i = 0; i < NUMPIXELS; i++)
-  {
-    pixels.setPixelColor(i, pixels.Color(r, g, b));
-    //pixels.show();
-  }
-  pixels.show();
+  
+  analogWrite(red_pin  , r);
+  analogWrite(green_pin, g);
+  analogWrite(blue_pin , b);
+  
+  Serial.print(r);
+  Serial.print(",");
+  Serial.print(g);
+  Serial.print(",");
+  Serial.println(b);
   return;
 }
 
-
+// recieve light pattern
+// return: char, 1: 再度呼び出しが必要
+char receive_light_pattern(Stream *port)
+{
+  char ans = 2;
+  int my_index = my_id / 8;
+  TimeOut to;
+  int index = 0;
+  int _pwm_red = 0;
+  int _pwm_green = 0;
+  int _pwm_blue = 0;
+  
+  Serial.println("-- p1 --");
+  to.set_timeout(20);
+  while(to.is_timeout() == false)
+  {
+    if(port->available())
+    {
+      int c = port->read();
+      //Serial.print("-- c --: ");
+      //Serial.print(c);
+      //Serial.println("");
+      index += 1;
+      if(c == header || c == header_v2)
+      {
+        //Serial.println("-- d --");
+        ans = 1;
+        break;                    // 再帰は避けたい
+      }
+      if((c & 0x80) == 0)         // プロトコルの仕様上、ありえないコードを受信
+      {
+        //Serial.println("-- e --");
+        ans = 2;
+        break;                    // エラーを通知して、関数を抜ける
+      }
+      c = c & 0x7f;               // 最上位ビットにマスク
+      to.set_timeout(20);
+      if(index == 1)
+      {
+        _pwm_red = c;
+      }
+      else if(index == 2)
+      {
+        _pwm_green = c;
+      }
+      else if(index == 3)
+      {
+        _pwm_blue = c;
+      }
+      else // 点灯するかどうかの判断
+      {
+        if ((index - 4) == my_index)
+        {
+          int bit_location = my_id % 8;
+          int masked_c = (c >> (7 - bit_location)) & 0x01;
+          if (masked_c)
+          {
+            light(_pwm_red, _pwm_green, _pwm_blue);
+            ans = 0;
+            break;
+          }
+        }
+      }
+    }
+  }
+  return ans;
+}
 
 // recieve light pattern v2
 // return: char, 1: 再度呼び出しが必要
@@ -292,7 +192,7 @@ char receive_light_pattern_v2(Stream *port)
   int _pwm_red = 0;
   int _pwm_green = 0;
   int _pwm_blue = 0;
-
+  
   Serial.println("-- p2 --");
   to.set_timeout(20);
   while(to.is_timeout() == false)
@@ -302,7 +202,7 @@ char receive_light_pattern_v2(Stream *port)
       int c = port->read();
       //Serial.println(c);
       index += 1;
-      if(c == header_v2)
+      if(c == header || c == header_v2)
       {
         //Serial.println("fuga");
         ans = 1;
@@ -316,8 +216,6 @@ char receive_light_pattern_v2(Stream *port)
       }
       c = c & 0x7f;               // 最上位ビットにマスク
       to.set_timeout(20);
-      if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
-        c *= 2;
       if(index == 1)
       {
         _pwm_red = c;
@@ -347,31 +245,23 @@ char receive_light_pattern_v2(Stream *port)
 }
 
 
-
-
-
-
-
-
 // setup
 void setup()
 { 
-  // serial LED setup
-  pixels.begin(); // This initializes the NeoPixel library.
-
-  // serial com setting
+  pinMode(red_pin, OUTPUT);
+  pinMode(green_pin, OUTPUT);
+  pinMode(blue_pin, OUTPUT);
+  
   Serial.begin(usbserial_baudrate);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Leonardo only
+  }
   delay(1000);
   Serial.println("-- setup start --");
-
-#ifdef PLATFORM_IS_UNO
+  
   _xbee_serial.begin(xbee_baudrate);
-  xbee = &_xbee_serial;
-#else
-  Serial1.begin(xbee_baudrate);
-  xbee = &Serial1;
-#endif
-
+  xbee = &_xbee_serial;// &Serial;
+  
   // get ID
   int _id = recieve_id(Serial);
   if(_id >= 0 && _id != id_init)
@@ -406,7 +296,7 @@ void setup()
   }
   Serial.println("-- my ID --");
   Serial.println(my_id);
-
+  
   // ID check
   if(my_id == id_init)
   {
@@ -415,24 +305,16 @@ void setup()
     for(;;);
   }
   Serial.println("-- ID check OK --");
-
+  
   // light test pattern
   Serial.println("-- test turn on --");
-  int level = 255;
-  light(level, level, level);
+  light(100, 100, 100);
   delay(1000);
-  //while(1);
   light(0, 0, 0);
-
+  
   Serial.println("-- setup end --");
   Serial.println("-- stand-by --");
 }
-
-
-
-
-
-
 
 // loop
 void loop()
@@ -441,6 +323,16 @@ void loop()
   {
     int c = xbee->read();
     Serial.println(c);
+    if((char)c == header)
+    {
+      //light(100, 100, 100);
+      while(1)
+      {
+        char ans = receive_light_pattern(xbee);
+        if(ans != 1)
+          break;
+      }
+    }
     if((char)c == header_v2)
     {
       //light(100, 100, 100);
@@ -451,7 +343,6 @@ void loop()
           break;
       }
     }
-    Serial.flush();
   }
 }
 

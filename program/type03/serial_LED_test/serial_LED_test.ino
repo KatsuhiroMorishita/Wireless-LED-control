@@ -164,10 +164,6 @@ public:
 
 Colormap colmap;
 
-void setup() {
-  Serial.begin(115200);
-  pixels.begin(); // This initializes the NeoPixel library.
-}
 
 void func1()
 {
@@ -188,9 +184,11 @@ void func1()
     {
       // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
       pixels.setPixelColor(i, pixels.Color(r, g, b)); // Moderately bright green color.
-      pixels.show(); // This sends the updated pixel color to the hardware.
-      //delay(delayval); // Delay for a period of time (in milliseconds).
+      
+      Serial.print("index: ");
+      Serial.println(i);
     }
+    pixels.show();
   }
 
   return;
@@ -230,9 +228,8 @@ void func2()
 
       // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
       pixels.setPixelColor(i, pixels.Color(r, g, b)); // Moderately bright green color.
-      pixels.show(); // This sends the updated pixel color to the hardware.
-      //delay(delayval); // Delay for a period of time (in milliseconds).
     }
+    pixels.show();
   }
   return;
 }
@@ -304,11 +301,14 @@ void func4()
 }
 
 
-
+void setup() {
+  Serial.begin(115200);
+  pixels.begin(); // This initializes the NeoPixel library.
+}
 
 void loop() 
 {
-  func3();
+  func2();
 }
 
 
