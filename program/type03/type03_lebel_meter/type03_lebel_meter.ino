@@ -342,6 +342,11 @@ char receive_light_pattern_v2(Stream *port)
       {
         if (c == my_index)
         {
+          /* 輝度ではないので、ここではコメントアウト
+          _pwm_red = _pwm_red << 1;
+          _pwm_green = _pwm_green << 1;
+          _pwm_blue = _pwm_blue << 1;
+          */
           light(_pwm_red, _pwm_green, _pwm_blue);
           ans = 0;
           break;

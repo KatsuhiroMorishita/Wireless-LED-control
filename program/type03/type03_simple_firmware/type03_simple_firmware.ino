@@ -264,10 +264,6 @@ int recieve_id(Stream &port)
 // 全てのLEDを単色に光らせる
 void light(int r, int g, int b)
 {
-  if(r < 127) r = r << 1;
-  if(g < 127) g = g << 1;
-  if(b < 127) b = b << 1;
-  
   r = (int)(briteness_max_for_all_on * (float)r);
   g = (int)(briteness_max_for_all_on * (float)g);
   b = (int)(briteness_max_for_all_on * (float)b);
@@ -331,6 +327,9 @@ char receive_light_pattern_v2(Stream *port)
       {
         if (c == my_index)
         {
+          _pwm_red = _pwm_red << 1;
+          _pwm_green = _pwm_green << 1;
+          _pwm_blue = _pwm_blue << 1;
           light(_pwm_red, _pwm_green, _pwm_blue);
           ans = 0;
           break;

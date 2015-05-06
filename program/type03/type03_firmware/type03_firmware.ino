@@ -13,14 +13,14 @@
 
 /** global variabls　part1 **********************/
 // header
-const char header = 0x7f;
-const char header_v2 = 0x3f;
+const char header = 0x7f;    // 多数のモジュールを一つのコマンドで操作する（ノード毎のグラデーションがない状況に適している）
+const char header_v2 = 0x3f; // 個々のモジュールに発光色を4byteで伝える
 const char header_v3 = 0x4f; // 内部時計のリセット（同期用）
 const char header_v4 = 0x5f; // オートモードへ切り替え
 const char header_v5 = 0x6f; // 遠隔操作モードへ切り替え
 
 // serial LED setup
-const int NUMPIXELS = 16 * 3 + 12;
+const int NUMPIXELS = 60;
 const int IO_PIN = 6;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, IO_PIN, NEO_GRB + NEO_KHZ800);
 const float briteness_max_for_all_on = 0.7f;
@@ -38,10 +38,10 @@ long xbee_baudrate = 38400;
 Stream *xbee;
 
 // other
-boolean mode_auto = true;        // auto: 自律制御
 const float power_scale_for_all = 0.3; // 全点灯時の輝度強度
 
 // モード切り替え関係
+boolean mode_auto = true;        // auto: 自律制御
 const int buff_size = 10;
 char buff[buff_size];
 const int sin_size = 41;
@@ -299,10 +299,6 @@ int recieve_id(Stream &port)
 // 全てのLEDを単色に光らせる
 void light(int r, int g, int b)
 {
-  if(r < 127) r = r << 1;
-  if(g < 127) g = g << 1;
-  if(b < 127) b = b << 1;
-  
   r = (int)(briteness_max_for_all_on * (float)r);
   g = (int)(briteness_max_for_all_on * (float)g);
   b = (int)(briteness_max_for_all_on * (float)b);
@@ -312,6 +308,12 @@ void light(int r, int g, int b)
     //pixels.show();
   }
   pixels.show();
+  
+  Serial.print(r);
+  Serial.print(",");
+  Serial.print(g);
+  Serial.print(",");
+  Serial.println(b);
   return;
 }
 
@@ -323,21 +325,7 @@ void light_pattern1()
   for(int k = 0; k < 100; k++)
   {
     colmap.GetColor((double)k / 100, &r, &g, &b);
-    Serial.print(r);
-    Serial.print(",");
-    Serial.print(g);
-    Serial.print(",");
-    Serial.print(b);
-    Serial.println("");
-
-    //delay(100);
-    for(int i = 0; i < NUMPIXELS; i++)
-    {
-      // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-      pixels.setPixelColor(i, pixels.Color(r, g, b)); // Moderately bright green color.
-      pixels.show(); // This sends the updated pixel color to the hardware.
-      //delay(delayval); // Delay for a period of time (in milliseconds).
-    }
+    light(r, g, b);
   }
   return;
 }
@@ -417,7 +405,7 @@ void light_pattern3()
 
 
 
-// ホテル発光
+// ホテル発光（点灯箇所は1箇所）
 void light_pattern4()
 {
   int _max = 20;
@@ -451,7 +439,7 @@ void light_pattern4()
 
 
 
-// 梵字点灯
+// 梵字点灯（ぼやっと帯状に発光する）
 void light_pattern5()
 {
   const int _max = 255;
@@ -524,50 +512,18 @@ void light_pattern5()
 void light_pattern6()
 {
   int r, g, b;
+  int color_step = 100;
+  
   // 発光テスト
-  for(int k = 0; k < 100; k++)
+  for(int k = 0; k < color_step; k++)
   {
-    colmap.GetColor((double)k / 100, &r, &g, &b);
-    r = (int)((float)r * power_scale_for_all);
-    g = (int)((float)g * power_scale_for_all);
-    b = (int)((float)b * power_scale_for_all);
-    Serial.print(r);
-    Serial.print(",");
-    Serial.print(g);
-    Serial.print(",");
-    Serial.print(b);
-    Serial.println("");
-
-    //delay(100);
-    for(int i = 0; i < NUMPIXELS; i++)
-    {
-      // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-      pixels.setPixelColor(i, pixels.Color(r, g, b)); // Moderately bright green color.
-      pixels.show(); // This sends the updated pixel color to the hardware.
-      //delay(delayval); // Delay for a period of time (in milliseconds).
-    }
+    colmap.GetColor((double)k / color_step, &r, &g, &b);
+    light(r, g, b);
   }
-  for(int k = 100; k > 0; k--)
+  for(int k = color_step; k > 0; k--)
   {
-    colmap.GetColor((double)k / 100, &r, &g, &b);
-    r = (int)((float)r * power_scale_for_all);
-    g = (int)((float)g * power_scale_for_all);
-    b = (int)((float)b * power_scale_for_all);
-    Serial.print(r);
-    Serial.print(",");
-    Serial.print(g);
-    Serial.print(",");
-    Serial.print(b);
-    Serial.println("");
-
-    //delay(100);
-    for(int i = 0; i < NUMPIXELS; i++)
-    {
-      // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-      pixels.setPixelColor(i, pixels.Color(r, g, b)); // Moderately bright green color.
-      pixels.show(); // This sends the updated pixel color to the hardware.
-      //delay(delayval); // Delay for a period of time (in milliseconds).
-    }
+    colmap.GetColor((double)k / color_step, &r, &g, &b);
+    light(r, g, b);
   }
   return;
 }
@@ -595,7 +551,7 @@ char receive_light_pattern_v2(Stream *port)
       int c = port->read();
       //Serial.println(c);
       index += 1;
-      if(c == header || c == header_v2)
+      if(c == header_v2)
       {
         //Serial.println("fuga");
         ans = 1;
@@ -625,6 +581,9 @@ char receive_light_pattern_v2(Stream *port)
       {
         if (c == my_index)
         {
+          _pwm_red = _pwm_red << 1;
+          _pwm_green = _pwm_green << 1;
+          _pwm_blue = _pwm_blue << 1;
           light(_pwm_red, _pwm_green, _pwm_blue);
           ans = 0;
           break;
@@ -737,7 +696,6 @@ void loop()
 {
   static TimeOut to;
   boolean data_receive = false;
-  //static char buff[5];
   static int wp = 0;
 
   //if(to.is_timeout() == true)  // もし制御信号が検出されないことが続いたらオートに戻すための仕掛け
@@ -752,7 +710,7 @@ void loop()
   {
     int c = xbee->read();
     buff[wp] = (char)c;
-    wp = (wp + 1) % 5;
+    wp = (wp + 1) % buff_size;
     Serial.println(c);
 
     // 制御パターン2

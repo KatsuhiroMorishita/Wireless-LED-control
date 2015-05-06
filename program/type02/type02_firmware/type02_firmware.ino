@@ -1,11 +1,11 @@
-/* program name: take_light_arduino_v5s                          */
+/* program name: type02_firmware                                 */
 /* author:  Katsuhiro MORISHITA                                  */
-/* purpose: ステージに並べられたテープLEDを制御するためのコード  */
-/* memo:    take_light_arduino_v5を流用した。                    */
- /* create:  2014-06-22                                          */
+/* purpose: テープLEDを制御するためのコード                           */
+/* memo:    take_light_arduino_v5を流用した。                      */
+/* create:  2014-06-22                                           */
 /* license:  MIT                                                 */
 /* format: header, R, G, B, lisht bit field                      */
-/* memo: 1) ATemega328P 内蔵8MHzで動作することを前提にしています */
+/* memo: 1) UNOで動作することを前提にしています                        */
 #include <AltSoftSerial.h>
 #include <EEPROM.h>
 
@@ -13,22 +13,26 @@
 const int red_pin   = 5;
 const int green_pin = 3;
 const int blue_pin  = 6;
+
 // header
 const char header = 0x7f;
 const char header_v2 = 0x3f;
+
 // address
 const int id_init = -1;
 int my_id = id_init;
+
 // pwm
 char pwm_red = 0;
 char pwm_green = 0;
 char pwm_blue = 0;
+
 // com
 long usbserial_baudrate = 38400;
 long xbee_baudrate = 38400;
 Stream *xbee;
 const int xbee_pin = 8;
-AltSoftSerial _xbee_serial(8, 9); // 11 pin is no connect!
+AltSoftSerial _xbee_serial(8, 9); // UNO用. Arduinoによってことなる。
 /**************************************/
 // timeout check class
 class TimeOut
@@ -102,6 +106,12 @@ void light(int r, int g, int b)
   analogWrite(red_pin  , r);
   analogWrite(green_pin, g);
   analogWrite(blue_pin , b);
+  
+  Serial.print(r);
+  Serial.print(",");
+  Serial.print(g);
+  Serial.print(",");
+  Serial.println(b);
   return;
 }
 
@@ -142,8 +152,6 @@ char receive_light_pattern(Stream *port)
       }
       c = c & 0x7f;               // 最上位ビットにマスク
       to.set_timeout(20);
-      if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
-        c *= 2;
       if(index == 1)
       {
         _pwm_red = c;
@@ -164,6 +172,9 @@ char receive_light_pattern(Stream *port)
           int masked_c = (c >> (7 - bit_location)) & 0x01;
           if (masked_c)
           {
+            _pwm_red = _pwm_red << 1;
+            _pwm_green = _pwm_green << 1;
+            _pwm_blue = _pwm_blue << 1;
             light(_pwm_red, _pwm_green, _pwm_blue);
             ans = 0;
             break;
@@ -195,7 +206,7 @@ char receive_light_pattern_v2(Stream *port)
     {
       int c = port->read();
       index += 1;
-      if(c == header || c == header_v2)
+      if(c == header_v2)
       {
         ans = 1;
         break;                    // 再帰は避けたい
@@ -207,8 +218,6 @@ char receive_light_pattern_v2(Stream *port)
       }
       c = c & 0x7f;               // 最上位ビットにマスク
       to.set_timeout(20);
-      if (index < 4 && c > 0 && c < 128) // cがpwm設定値で、かつ2倍してもchar最大値を超えない場合
-        c *= 2;
       if(index == 1)
       {
         _pwm_red = c;
@@ -225,6 +234,9 @@ char receive_light_pattern_v2(Stream *port)
       {
         if (c == my_index)
         {
+          _pwm_red = _pwm_red << 1;
+          _pwm_green = _pwm_green << 1;
+          _pwm_blue = _pwm_blue << 1;
           light(_pwm_red, _pwm_green, _pwm_blue);
           ans = 0;
           break;
@@ -239,10 +251,12 @@ char receive_light_pattern_v2(Stream *port)
 // setup
 void setup()
 { 
+  // init IO
   pinMode(red_pin, OUTPUT);
   pinMode(green_pin, OUTPUT);
   pinMode(blue_pin, OUTPUT);
 
+  // init com
   Serial.begin(usbserial_baudrate);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only

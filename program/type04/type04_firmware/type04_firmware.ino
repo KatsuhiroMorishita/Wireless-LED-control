@@ -1,9 +1,10 @@
-/* program name: take_light_arduino_v5                  */
+/* program name: type04_firmware                        */
 /* author:  Katsuhiro MORISHITA                         */
-/* :                                                    */
-/* create:  2014-06-06                                  */
+/* purpose: 笑平さんの体にぺたぺた貼り付けて光らせる。         */
+/* create:  2015-04-29                                  */
 /* license:  MIT                                        */
 /* format: header, R, G, B, lisht bit field             */
+/* platform: UNO                                        */
 #include <AltSoftSerial.h>
 #include <EEPROM.h>
 #include <Adafruit_NeoPixel.h>
@@ -19,9 +20,6 @@ Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ80
 // header
 const char header_color = 0x7f;
 
-// address
-const int id_init = -1;
-int my_id = id_init;
 // pwm
 char pwm_red = 0;
 char pwm_green = 0;
@@ -30,8 +28,7 @@ char pwm_blue = 0;
 long usbserial_baudrate = 115200;
 long xbee_baudrate = 19200;
 Stream *xbee;
-const int xbee_pin = 8;
-AltSoftSerial _xbee_serial(xbee_pin, 11); // 11 pin is no connect!
+AltSoftSerial _xbee_serial(8, 9); // ポートはArduionによって異なる
 
 
 /**************************************/
@@ -68,15 +65,11 @@ class TimeOut
 char receive_light_pattern(Stream *port)
 {
   char ans = 2;
-  int my_index = my_id / 8;
   TimeOut to;
   int index = 0;
-  int _pwm_red = 0;
-  int _pwm_green = 0;
-  int _pwm_blue = 0;
   
-  int rgbCount = 0;
-  int count = 0;
+  int rgbCount = 0;   // これを使って受信データをrgbに分類する
+  int count = 0;      // シリアルテープLEDの個々のLEDの番号
   int r;
   int g;
   int b;
@@ -116,12 +109,15 @@ char receive_light_pattern(Stream *port)
         
         if(rgbCount == 0) {
           r = c;
+          r = r << 1;
           rgbCount = 1;
         }else if(rgbCount == 1){
           g = c;
+          g = g << 1;
           rgbCount = 2;
         }else{
           b = c;
+          b = b << 1;
           rgbCount = 0;
           
           /*
@@ -131,7 +127,7 @@ char receive_light_pattern(Stream *port)
           */
           
           pixels.setPixelColor(count, pixels.Color(r, g, b)); // Moderately bright green color.
-          count = count+1;
+          count += 1;
         }
       }
     } 
