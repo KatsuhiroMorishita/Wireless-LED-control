@@ -1,6 +1,6 @@
-/* program name: header2_keyboard                       */
+/* program name: header2                                */
 /* author:  Katsuhiro Morishita                         */
-/* purpose: to control with key press.                  */
+/* purpose: to control with key press or auto.          */
 /* plat form: Processing 2.2.1                          */
 /* create:  2014-06-06                                  */
 /* license:  MIT                                        */
@@ -8,8 +8,8 @@
 import processing.serial.*;
 
 // target
-final int module_id_start = 101;
-final int module_id_end = 121;
+final int module_id_start = 1;
+final int module_id_end = 23;
 
 // com
 Serial myPort;
@@ -147,7 +147,7 @@ void setup()
 
 void draw()
 {
-  pattern01();
+  //pattern01();
 }
 
 void serialEvent(Serial myPort) 
@@ -187,7 +187,10 @@ void keyPressed()
   print(b);
   println("");
   
-  light(r, g, b, unit_id);
+  for(int _id = module_id_start; _id <= module_id_end; _id++)
+  {
+    light(r, g, b, _id);
+  }
   
   // for check
   background(r, g, b);
