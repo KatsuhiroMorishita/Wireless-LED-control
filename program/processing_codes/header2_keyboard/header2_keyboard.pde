@@ -1,10 +1,10 @@
-/* program name: take_light_processing_header2_v5       */
+/* program name: header2_keyboard                       */
 /* author:  Katsuhiro Morishita                         */
-/* memo: */
+/* purpose: to control with key press.                  */
 /* plat form: Processing 2.2.1                          */
 /* create:  2014-06-06                                  */
 /* license:  MIT                                        */
-/* format: code, red, green, blue, on-off control       */
+/* format: header code, red, green, module index        */
 import processing.serial.*;
 
 // target
@@ -14,7 +14,14 @@ final int module_id_end = 121;
 // com
 Serial myPort;
 final int baudrate = 19200;
-final byte pattern_code_header = 0x3f;
+
+// header
+final byte header_v2 = 0x3f;
+final byte header_v3 = 0x4f;
+final byte header_v4 = 0x5f;
+final byte header_v5 = 0x6f;
+
+// LED
 float[] coefficient = {0.8, 1.0, 0.8};
 float power = 1.0;
 //-------------------------------
@@ -23,7 +30,7 @@ float power = 1.0;
 void light(int r, int g, int b, int unit_id)
 {
   // send header
-  myPort.write(pattern_code_header);
+  myPort.write(header_v2);
   delay(5);
   
   // tuning
@@ -150,4 +157,52 @@ void serialEvent(Serial myPort)
   //String msg = myPort.readString();
   if(msg != null)
     println(trim(msg));
+}
+
+// keyboard event
+// send light pattern to LED control module.
+void keyPressed()
+{
+  int i = (key - 0x30);
+  print("key: ");
+  println(i);
+  
+  float pi = 3.14;
+  float theta = i / 9.0 * 2.0 * pi;
+  int range = 127 / 2;
+  float offset = 120.0 / 180.0 * pi;
+  int r = (int)(sin(theta + offset * 0) * range + range);
+  int g = (int)(sin(theta + offset * 1) * range + range);
+  int b = (int)(sin(theta + offset * 2) * range + range);
+  if(i == 0){ // if you press '0', turn off LED.
+    r = 0;
+    g = 0;
+    b = 0;
+  }
+  print("r, g, b: ");
+  print(r);
+  print(", ");
+  print(g);
+  print(", ");
+  print(b);
+  println("");
+  
+  light(r, g, b, unit_id);
+  
+  // for check
+  background(r, g, b);
+  
+ // change to control
+ if(key == 'a'){
+   println("pressed key: a");
+   for(int k = 0; k < 200; k++)
+     myPort.write(0x5f);
+ }
+ 
+ // change to auto
+ if(key == 'b'){
+   println("pressed key: b");
+   for(int k = 0; k < 200; k++)
+     myPort.write(0x6f);
+ }
 }
