@@ -254,24 +254,29 @@ kmTimer kmtimer;
 // IDを受信する
 // IDは文字列で受信する。
 // 例："1234"
-int recieve_id(Stream &port)
+int recieve_id(Stream *_port)
 {
   TimeOut to;
   int id = id_init;
-  Stream *_port = &port;
-  
+  //Stream *_port = &port;
+
   long wait_time_ms = 5000l;
   _port->print("please input ID. within ");
   _port->print(wait_time_ms);
   _port->println(" ms.");
   
   to.set_timeout(wait_time_ms);
+  _port->flush();
   while(to.is_timeout() == false)
   {
     if(_port->available())
     {
       int c = _port->read();
-      if (c < '0' && c > '9')
+      //_port->print("r: ");
+      //_port->println(c);
+      if (c == 0x0a || c == 0x0d)
+        break;
+      if (c < '0' || c > '9')
       {
         _port->print("-- Error: non number char was received --");
         break;
@@ -280,12 +285,14 @@ int recieve_id(Stream &port)
         id = 0;
       to.set_timeout(50);            // 一度受信が始まったらタイムアウトを短くして、処理時間を短縮する
       id = id * 10 + (c - '0');
-      if(id >= 3200)                 // 3200以上の数値を10倍するとint型の最大値を超える可能性がある
+      if(id >= 3200)                 // 3200以上の数値を10倍するとint型の最大値を超える可能性がある.負数は無視。
         break;
     }
   }
   if(id != id_init)
     _port->print("-- ID was received --");
+  //_port->print("r ID: ");
+  //_port->println(id);
   return id;
 }
 
@@ -525,7 +532,7 @@ void setup()
   randomSeed(analogRead(A0));
   
   // get ID
-  int _id = recieve_id(Serial);
+  int _id = recieve_id(&Serial);
   if(_id >= 0 && _id != id_init)
   {
     my_id = _id;
