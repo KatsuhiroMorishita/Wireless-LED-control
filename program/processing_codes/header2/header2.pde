@@ -8,8 +8,8 @@
 import processing.serial.*;
 
 // target
-final int module_id_start = 101;
-final int module_id_end = 131;
+final int module_id_start = 39;
+final int module_id_end = 55;
 
 // com
 Serial myPort;
