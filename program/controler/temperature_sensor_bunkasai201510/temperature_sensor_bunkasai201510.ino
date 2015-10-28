@@ -1,11 +1,12 @@
-/* program name: temperature_sensor_tokyo201412         */
+/* program name: temperature_sensor_bunkasai201510      */
 /* author:  Katsuhiro MORISHITA                         */
 /* purpose: 温度に合わせて、テープLEDの発光色を変える。        */
-/* 12本前後のテープLEDを4つのIDにまとめて、4つのセンサで色を制御 */
-/* create:  2014-12-08                                  */
+/* 7本のテープLEDを1つの温度センサで色を制御する。             */
+/* create:  2015-10-28                                  */
 /* license:  MIT                                        */
 const char pattern_code_header = 0x3f;
-
+const int id_start = 39;
+const int id_end = 47;                   // ID:46は不調だった。
 Stream* xbee_serial = &Serial1;
 
 
@@ -223,7 +224,7 @@ void setup()
 
   // 発光テスト
   int r, g, b;
-  for(int id = 1; id <= 4; id++)
+  for(int id = id_start; id <= id_end; id++)
   {
     for(int i = 0; i < 100; i++)
     {
@@ -235,7 +236,7 @@ void setup()
       Serial.print(b);
       Serial.println("");
 
-      delay(100);
+      delay(5);
       light(r, g, b, id);
     }
   }
@@ -252,18 +253,21 @@ void setup()
 void loop()
 {
   int t0, t1, t2, t3;
-  int diff_max = 170;
+  int diff_max = 100;
   get_temperature_diff(&t0, &t1, &t2, &t3);
 
   int r, g, b;
-  colmap.GetColor((double)t0 / diff_max, &r, &g, &b);
-  light(r, g, b, 1);
-  colmap.GetColor((double)t1 / diff_max, &r, &g, &b);
-  light(r, g, b, 2);
-  colmap.GetColor((double)t2 / diff_max, &r, &g, &b);
-  light(r, g, b, 3);
-  colmap.GetColor((double)t3 / diff_max, &r, &g, &b);
-  light(r, g, b, 4);
+  for(int id = id_start; id <= id_end; id++)
+  {
+    colmap.GetColor((double)t0 / diff_max, &r, &g, &b);
+    light(r, g, b, id);
+  }
+  //colmap.GetColor((double)t1 / diff_max, &r, &g, &b);
+  //light(r, g, b, 2);
+  //colmap.GetColor((double)t2 / diff_max, &r, &g, &b);
+  //light(r, g, b, 3);
+  //colmap.GetColor((double)t3 / diff_max, &r, &g, &b);
+  //light(r, g, b, 4);
 
   delay(5);
 
