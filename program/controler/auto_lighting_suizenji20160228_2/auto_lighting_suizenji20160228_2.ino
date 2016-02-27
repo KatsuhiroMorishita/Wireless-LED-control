@@ -1,4 +1,4 @@
-/* program name:                                        */
+/* program name: auto_lighting_suizenji20160228_2       */
 /* author:  Katsuhiro MORISHITA                         */
 /* purpose: 水前寺公園の恋明かりのために、LEDの発光色を変える   */
 /* Fioでつかおうと思ったが、使えなかったのでUNOになった。       */
@@ -8,7 +8,7 @@
 
 // target ID
 const int id_start = 1;
-const int id_end = 20;                   // ID:46は不調だった。
+const int id_end = 20;
 
 // serial
 long usbserial_baudrate = 38400;
@@ -25,7 +25,7 @@ const char header_v5 = 0x6f; // 遠隔操作モードへ切り替え
 const char pattern_code_header = header_v2;
 
 // apmlitude
-uint8_t amp_flags[id_end];
+uint8_t amp_flags[id_end];  // 点滅させるノードのフラグを格納する
 
 
 class Colormap
@@ -167,7 +167,7 @@ public:
 };
 
 
-
+// 点灯させる
 void light(int r, int g, int b, int unit_id)
 {
   // send header
@@ -198,6 +198,8 @@ void light(int r, int g, int b, int unit_id)
 }
 
 
+// 発光色を変更する
+// val:位相, _max:位相の最大値
 void change_color_group(int val, int _max)
 {
   int r, g, b;
@@ -220,20 +222,21 @@ void change_color_group(int val, int _max)
   return;
 }
 
-
-void change_amp_group(float _amp, int r, int g, int b, uint8_t change_flag)
+// 発光強度を変更する
+// x: 位相（0-1.0）, change_flag: 振幅を変えるなら1
+void change_amp_group(float x, int r, int g, int b, uint8_t change_flag)
 {
   int _r, _g, _b;
     
-  _amp = cos(_amp * 2.0 * 3.14) / 2.0 + 0.5;
-  float factor = 1.0f;
+  float _amp = cos(x * 2.0 * 3.14) / 2.0 + 0.5;  // 振幅を決める
+  float factor = 1.0f;                           // 発光強度の上限
   r = (int)((float)r * factor);
   g = (int)((float)g * factor);
   b = (int)((float)b * factor);
   
   for(int id = id_start; id <= id_end; id++)
   {
-    if(id % 8 == 0) continue;
+    if(id % 8 == 0) continue;                    // 8の倍数は飛ばす
     if(amp_flags[id] == 1 && change_flag == 1){
       _r = (int)((float)r * _amp);
       _g = (int)((float)g * _amp);
@@ -257,7 +260,7 @@ void change_amp_group(float _amp, int r, int g, int b, uint8_t change_flag)
   return;
 }
 
-
+// 点滅するノードを変更する
 void reset_amp()
 {
   for(int i = 0; i < id_end; i++)
